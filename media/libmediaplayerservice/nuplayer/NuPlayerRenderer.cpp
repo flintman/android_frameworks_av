@@ -1262,6 +1262,9 @@ void NuPlayer::Renderer::onPause() {
         mAudioSink->pause();
         startAudioOffloadPauseTimeout();
     }
+    //for video only stream, reset mAnchorTimeMediaUs on stream's pause scenario
+    if (mHasVideo && !mHasAudio)
+        mAnchorTimeMediaUs = -1;
 
     ALOGV("now paused audio queue has %d entries, video has %d entries",
           mAudioQueue.size(), mVideoQueue.size());
