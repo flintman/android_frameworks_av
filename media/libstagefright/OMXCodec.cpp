@@ -23,6 +23,8 @@
 #endif
 
 #include <utils/Log.h>
+#define ATRACE_TAG ATRACE_TAG_VIDEO
+#include <utils/Trace.h>
 
 #include "include/AACEncoder.h"
 
@@ -2386,6 +2388,7 @@ void OMXCodec::on_message(const omx_message &msg) {
 
         case omx_message::EMPTY_BUFFER_DONE:
         {
+            ATRACE_BEGIN("EMPTY_BUFFER_DONE");
             IOMX::buffer_id buffer = msg.u.extended_buffer_data.buffer;
 
             CODEC_LOGV("EMPTY_BUFFER_DONE(buffer: %u)", buffer);
@@ -2426,11 +2429,13 @@ void OMXCodec::on_message(const omx_message &msg) {
                     drainInputBuffer(&buffers->editItemAt(i));
                 }
             }
+            ATRACE_END();
             break;
         }
 
         case omx_message::FILL_BUFFER_DONE:
         {
+            ATRACE_BEGIN("FILL_BUFFER_DONE");
             IOMX::buffer_id buffer = msg.u.extended_buffer_data.buffer;
             OMX_U32 flags = msg.u.extended_buffer_data.flags;
 
@@ -2530,6 +2535,7 @@ void OMXCodec::on_message(const omx_message &msg) {
                                 msg.u.extended_buffer_data.timestamp);
 
                         fillOutputBuffer(info);
+                        ATRACE_END();
                         break;
                     }
 
@@ -2547,11 +2553,17 @@ void OMXCodec::on_message(const omx_message &msg) {
                 }
                 mFilledBuffers.push_back(i);
                 mBufferFilled.signal();
+                if (!strncasecmp(mMIME, "video/", 6)) {
+                    ATRACE_INT("Output buffers with OMXCodec", mFilledBuffers.size());
+                    ATRACE_INT("Output Buffers with OMX client",
+                            countBuffersWeOwn(mPortBuffers[kPortIndexOutput]));
+                }
                 if (mIsEncoder) {
                     sched_yield();
                 }
             }
 
+            ATRACE_END();
             break;
         }
 
@@ -3248,6 +3260,7 @@ OMXCodec::BufferInfo *OMXCodec::findEmptyInputBuffer() {
 }
 
 bool OMXCodec::drainInputBuffer(BufferInfo *info) {
+    ATRACE_CALL();
     if (info != NULL) {
         CHECK_EQ((int)info->mStatus, (int)OWNED_BY_US);
     }
@@ -3550,6 +3563,7 @@ void OMXCodec::setState(State newState) {
 
 status_t OMXCodec::waitForBufferFilled_l() {
 
+    ATRACE_CALL();
     if (mIsEncoder && mIsVideo) {
         // For timelapse video recording, the timelapse video recording may
         // not send an input frame for a _long_ time. Do not use timeout
@@ -4135,6 +4149,7 @@ sp<MetaData> OMXCodec::getFormat() {
 
 status_t OMXCodec::read(
         MediaBuffer **buffer, const ReadOptions *options) {
+    ATRACE_CALL();
     status_t err = OK;
     *buffer = NULL;
 
@@ -4242,6 +4257,12 @@ status_t OMXCodec::read(
         }
     }
 
+    if (!strncasecmp(mMIME, "video/", 6)) {
+        ATRACE_INT("Output buffers with OMXCodec", mFilledBuffers.size());
+        ATRACE_INT("Output Buffers with OMX client",
+                countBuffersWeOwn(mPortBuffers[kPortIndexOutput]));
+    }
+
     while (mState != ERROR && !mNoMoreOutputData && mFilledBuffers.empty()) {
         if ((err = waitForBufferFilled_l()) != OK) {
             return err;
@@ -4269,6 +4290,11 @@ status_t OMXCodec::read(
 
     size_t index = *mFilledBuffers.begin();
     mFilledBuffers.erase(mFilledBuffers.begin());
+    if (!strncasecmp(mMIME, "video/", 6)) {
+        ATRACE_INT("Output buffers with OMXCodec", mFilledBuffers.size());
+        ATRACE_INT("Output Buffers with OMX client",
+                countBuffersWeOwn(mPortBuffers[kPortIndexOutput]));
+    }
 
     BufferInfo *info = &mPortBuffers[kPortIndexOutput].editItemAt(index);
     CHECK_EQ((int)info->mStatus, (int)OWNED_BY_US);

@@ -2138,7 +2138,11 @@ void AwesomePlayer::onVideoEvent() {
 
         latenessUs = nowUs - timeUs;
 
-        ATRACE_INT("Video Lateness (ms)", latenessUs / 1E3);
+        if (latenessUs >= 0) {
+            ATRACE_INT("Video Lateness (ms)", latenessUs / 1E3);
+        } else {
+            ATRACE_INT("Video Earlyness (ms)", -latenessUs / 1E3);
+        }
 
         if (latenessUs > 500000ll
                 && mAudioPlayer != NULL
@@ -2303,6 +2307,7 @@ void AwesomePlayer::onVideoEvent() {
         ALOGV("next frame in %" PRId64, delayUs);
         // try to schedule 30ms before time due
         postVideoEvent_l(delayUs > 60000 ? 30000 : (delayUs < 30000 ? 0 : delayUs - 30000));
+        ATRACE_INT("Video postDelay", delayUs < 0 ? 1 : delayUs);
         return;
     }
 
