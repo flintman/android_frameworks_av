@@ -120,9 +120,10 @@ struct BufferMeta {
             return;
         }
 
+        size_t bytesToCopy = header->nFlags & OMX_BUFFERFLAG_EXTRADATA ?
+            header->nAllocLen - header->nOffset : header->nFilledLen;
         memcpy((OMX_U8 *)mMem->pointer() + header->nOffset,
-                header->pBuffer + header->nOffset,
-                header->nFilledLen);
+               header->pBuffer + header->nOffset, bytesToCopy);
     }
 
     void CopyToOMX(const OMX_BUFFERHEADERTYPE *header) {
@@ -130,9 +131,10 @@ struct BufferMeta {
             return;
         }
 
+        size_t bytesToCopy = header->nFlags & OMX_BUFFERFLAG_EXTRADATA ?
+            header->nAllocLen - header->nOffset : header->nFilledLen;
         memcpy(header->pBuffer + header->nOffset,
-                (const OMX_U8 *)mMem->pointer() + header->nOffset,
-                header->nFilledLen);
+               (const OMX_U8 *)mMem->pointer() + header->nOffset, bytesToCopy);
     }
 
     void setGraphicBuffer(const sp<GraphicBuffer> &graphicBuffer) {
