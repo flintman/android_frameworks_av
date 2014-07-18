@@ -882,6 +882,12 @@ protected:
 
         // returns true if given output is direct output
         bool isDirectOutput(audio_io_handle_t output);
+
+        //parameter indicates of HDMI speakers disabled from the Qualcomm settings
+        bool mHdmiAudioDisabled;
+        //parameter indicates if HDMI plug in/out detected
+        bool mHdmiAudioEvent;
+
         static float volIndexToAmpl(audio_devices_t device, const StreamDescriptor& streamDesc,
                 int indexInUi);
         static bool isVirtualInputDevice(audio_devices_t device);
@@ -914,6 +920,7 @@ private:
                 const audio_offload_info_t *offloadInfo);
         // internal function to derive a stream type value from audio attributes
         audio_stream_type_t streamTypefromAttributesInt(const audio_attributes_t *attr);
+
         // return true if any output is playing anything besides the stream to ignore
         bool isAnyOutputActive(audio_stream_type_t streamToIgnore);
         // event is one of STARTING_OUTPUT, STARTING_BEACON, STOPPING_OUTPUT, STOPPING_BEACON
@@ -934,6 +941,9 @@ private:
                                                           const char *device_address);
         sp<DeviceDescriptor>  getDeviceDescriptor(const audio_devices_t device,
                                                   const char *device_address);
+
+        // Used for voip + voice concurrency usecase
+        int mPrevPhoneState;
 
 };
 

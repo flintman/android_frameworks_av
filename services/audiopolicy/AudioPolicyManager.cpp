@@ -293,6 +293,15 @@ status_t AudioPolicyManager::setDeviceConnectionStateInt(audio_devices_t device,
         // handle output device connection
         case AUDIO_POLICY_DEVICE_STATE_AVAILABLE: {
             if (index >= 0) {
+#ifdef AUDIO_EXTN_HDMI_SPK_ENABLED
+                if ((popcount(device) == 1) && (device & AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
+                   if (!strncmp(device_address, "hdmi_spkr", 9)) {
+                        mHdmiAudioDisabled = false;
+                    } else {
+                        mHdmiAudioEvent = true;
+                    }
+                }
+#endif
                 ALOGW("setDeviceConnectionState() device already connected: %x", device);
                 return INVALID_OPERATION;
             }
@@ -300,6 +309,19 @@ status_t AudioPolicyManager::setDeviceConnectionStateInt(audio_devices_t device,
 
             // register new device as available
             index = mAvailableOutputDevices.add(devDesc);
+
+#ifdef AUDIO_EXTN_HDMI_SPK_ENABLED
+            if ((popcount(device) == 1) && (device & AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
+                if (!strncmp(device_address, "hdmi_spkr", 9)) {
+                    mHdmiAudioDisabled = false;
+                } else {
+                    mHdmiAudioEvent = true;
+                }
+                if (mHdmiAudioDisabled || !mHdmiAudioEvent) {
+                    mAvailableOutputDevices.remove(devDesc);
+                }
+            }
+#endif
             if (index >= 0) {
                 sp<HwModule> module = getModuleForDevice(device);
                 if (module == 0) {
@@ -334,6 +356,15 @@ status_t AudioPolicyManager::setDeviceConnectionStateInt(audio_devices_t device,
         // handle output device disconnection
         case AUDIO_POLICY_DEVICE_STATE_UNAVAILABLE: {
             if (index < 0) {
+#ifdef AUDIO_EXTN_HDMI_SPK_ENABLED
+                if ((popcount(device) == 1) && (device & AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
+                    if (!strncmp(device_address, "hdmi_spkr", 9)) {
+                        mHdmiAudioDisabled = true;
+                    } else {
+                        mHdmiAudioEvent = false;
+                    }
+                }
+#endif
                 ALOGW("setDeviceConnectionState() device not connected: %x", device);
                 return INVALID_OPERATION;
             }
@@ -348,6 +379,15 @@ status_t AudioPolicyManager::setDeviceConnectionStateInt(audio_devices_t device,
             // remove device from available output devices
             mAvailableOutputDevices.remove(devDesc);
 
+#ifdef AUDIO_EXTN_HDMI_SPK_ENABLED
+            if ((popcount(device) == 1) && (device & AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
+                if (!strncmp(device_address, "hdmi_spkr", 9)) {
+                    mHdmiAudioDisabled = true;
+                } else {
+                    mHdmiAudioEvent = false;
+                }
+            }
+#endif
             checkOutputsForDevice(devDesc, state, outputs, devDesc->mAddress);
             } break;
 
@@ -381,6 +421,23 @@ status_t AudioPolicyManager::setDeviceConnectionStateInt(audio_devices_t device,
             audio_devices_t newDevice = getNewOutputDevice(mPrimaryOutput, false /*fromCache*/);
             updateCallRouting(newDevice);
         }
+
+#ifdef AUDIO_EXTN_FM_ENABLED
+        if(device == AUDIO_DEVICE_OUT_FM) {
+            audio_devices_t newDevice = AUDIO_DEVICE_NONE ;
+            if (state == AUDIO_POLICY_DEVICE_STATE_AVAILABLE) {
+                mOutputs.valueFor(mPrimaryOutput)->changeRefCount(AUDIO_STREAM_MUSIC, 1);
+                newDevice = (audio_devices_t)(getNewOutputDevice(mPrimaryOutput, false) | AUDIO_DEVICE_OUT_FM);
+            } else {
+                mOutputs.valueFor(mPrimaryOutput)->changeRefCount(AUDIO_STREAM_MUSIC, -1);
+            }
+
+            AudioParameter param = AudioParameter();
+            param.addInt(String8("handle_fm"), (int)newDevice);
+            ALOGV("setDeviceConnectionState() setParameters handle_fm");
+            mpClientInterface->setParameters(mPrimaryOutput, param.toString());
+        }
+#endif
         for (size_t i = 0; i < mOutputs.size(); i++) {
             audio_io_handle_t output = mOutputs.keyAt(i);
             if ((mPhoneState != AUDIO_MODE_IN_CALL) || (output != mPrimaryOutput)) {
@@ -718,6 +775,8 @@ void AudioPolicyManager::setPhoneState(audio_mode_t state)
 
     sp<AudioOutputDescriptor> hwOutputDesc = mOutputs.valueFor(mPrimaryOutput);
 
+    mPrevPhoneState = oldState;
+
     int delayMs = 0;
     if (isStateInCall(state)) {
         nsecs_t sysTime = systemTime();
@@ -768,6 +827,15 @@ void AudioPolicyManager::setPhoneState(audio_mode_t state)
     } else {
         setOutputDevice(mPrimaryOutput, rxDevice, force, 0);
     }
+    //update device for all non-primary outputs
+    for (size_t i = 0; i < mOutputs.size(); i++) {
+        audio_io_handle_t output = mOutputs.keyAt(i);
+        if (output != mPrimaryOutput) {
+            newDevice = getNewOutputDevice(output, false /*fromCache*/);
+            setOutputDevice(output, newDevice, (newDevice != AUDIO_DEVICE_NONE));
+        }
+    }
+
     // if entering in call state, handle special case of active streams
     // pertaining to sonification strategy see handleIncallSonification()
     if (isStateInCall(state)) {
@@ -807,6 +875,9 @@ void AudioPolicyManager::setForceUse(audio_policy_force_use_t usage,
         break;
     case AUDIO_POLICY_FORCE_FOR_MEDIA:
         if (config != AUDIO_POLICY_FORCE_HEADPHONES && config != AUDIO_POLICY_FORCE_BT_A2DP &&
+#ifdef AUDIO_EXTN_FM_ENABLED
+            config != AUDIO_POLICY_FORCE_SPEAKER &&
+#endif
             config != AUDIO_POLICY_FORCE_WIRED_ACCESSORY &&
             config != AUDIO_POLICY_FORCE_ANALOG_DOCK &&
             config != AUDIO_POLICY_FORCE_DIGITAL_DOCK && config != AUDIO_POLICY_FORCE_NONE &&
@@ -3163,7 +3234,9 @@ AudioPolicyManager::AudioPolicyManager(AudioPolicyClientInterface *clientInterfa
     mAudioPortGeneration(1),
     mBeaconMuteRefCount(0),
     mBeaconPlayingRefCount(0),
-    mBeaconMuted(false)
+    mBeaconMuted(false),
+    mHdmiAudioDisabled(false), mHdmiAudioEvent(false),
+    mPrevPhoneState(0)
 {
     mUidCached = getuid();
     mpClientInterface = clientInterface;
@@ -4738,9 +4811,12 @@ audio_devices_t AudioPolicyManager::getDeviceForStrategy(routing_strategy strate
                 if (device) break;
                 device = availableOutputDeviceTypes & AUDIO_DEVICE_OUT_AUX_DIGITAL;
                 if (device) break;
-                device = availableOutputDeviceTypes & AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET;
-                if (device) break;
             }
+
+            // Allow voice call on USB ANLG DOCK headset
+            device = availableOutputDeviceTypes & AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET;
+            if (device) break;
+
             device = availableOutputDeviceTypes & AUDIO_DEVICE_OUT_EARPIECE;
             if (device) break;
             device = mDefaultOutputDevice->mDeviceType;
@@ -4780,6 +4856,20 @@ audio_devices_t AudioPolicyManager::getDeviceForStrategy(routing_strategy strate
             }
             break;
         }
+
+        if (isInCall() && (device == AUDIO_DEVICE_NONE)) {
+            // when in call, get the device for Phone strategy
+            device = getDeviceForStrategy(STRATEGY_PHONE, false /*fromCache*/);
+            break;
+        }
+
+#ifdef AUDIO_EXTN_FM_ENABLED
+        if (availableOutputDeviceTypes & AUDIO_DEVICE_OUT_FM) {
+            if (mForceUse[AUDIO_POLICY_FORCE_FOR_MEDIA] == AUDIO_POLICY_FORCE_SPEAKER) {
+                device = AUDIO_DEVICE_OUT_SPEAKER;
+            }
+        }
+#endif
     break;
 
     case STRATEGY_SONIFICATION:
@@ -4828,6 +4918,19 @@ audio_devices_t AudioPolicyManager::getDeviceForStrategy(routing_strategy strate
     case STRATEGY_REROUTING:
     case STRATEGY_MEDIA: {
         uint32_t device2 = AUDIO_DEVICE_NONE;
+
+        if (isInCall() && (device == AUDIO_DEVICE_NONE)) {
+            // when in call, get the device for Phone strategy
+            device = getDeviceForStrategy(STRATEGY_PHONE, false /*fromCache*/);
+            break;
+        }
+#ifdef AUDIO_EXTN_FM_ENABLED
+        if (mForceUse[AUDIO_POLICY_FORCE_FOR_MEDIA] == AUDIO_POLICY_FORCE_SPEAKER) {
+            device = AUDIO_DEVICE_OUT_SPEAKER;
+            break;
+        }
+#endif
+
         if (strategy != STRATEGY_SONIFICATION) {
             // no sonification on remote submix (e.g. WFD)
             if (mAvailableOutputDevices.getDevice(AUDIO_DEVICE_OUT_REMOTE_SUBMIX, String8("0")) != 0) {
@@ -4867,14 +4970,29 @@ audio_devices_t AudioPolicyManager::getDeviceForStrategy(routing_strategy strate
         if (device2 == AUDIO_DEVICE_NONE) {
             device2 = availableOutputDeviceTypes & AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET;
         }
-        if ((device2 == AUDIO_DEVICE_NONE) && (strategy != STRATEGY_SONIFICATION)) {
+        if ((strategy != STRATEGY_SONIFICATION) && (device == AUDIO_DEVICE_NONE)
+             && (device2 == AUDIO_DEVICE_NONE)) {
             // no sonification on aux digital (e.g. HDMI)
             device2 = availableOutputDeviceTypes & AUDIO_DEVICE_OUT_AUX_DIGITAL;
         }
         if ((device2 == AUDIO_DEVICE_NONE) &&
-                (mForceUse[AUDIO_POLICY_FORCE_FOR_DOCK] == AUDIO_POLICY_FORCE_ANALOG_DOCK)) {
+                (mForceUse[AUDIO_POLICY_FORCE_FOR_DOCK] == AUDIO_POLICY_FORCE_ANALOG_DOCK)
+                && (strategy != STRATEGY_SONIFICATION)) {
             device2 = availableOutputDeviceTypes & AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET;
         }
+#ifdef AUDIO_EXTN_FM_ENABLED
+            if ((strategy != STRATEGY_SONIFICATION) && (device == AUDIO_DEVICE_NONE)
+                 && (device2 == AUDIO_DEVICE_NONE)) {
+                device2 = availableOutputDeviceTypes & AUDIO_DEVICE_OUT_FM_TX;
+            }
+#endif
+#ifdef AUDIO_EXTN_AFE_PROXY_ENABLED
+            if ((strategy != STRATEGY_SONIFICATION) && (device == AUDIO_DEVICE_NONE)
+                 && (device2 == AUDIO_DEVICE_NONE)) {
+                // no sonification on WFD sink
+                device2 = availableOutputDeviceTypes & AUDIO_DEVICE_OUT_PROXY;
+            }
+#endif
         if (device2 == AUDIO_DEVICE_NONE) {
             device2 = availableOutputDeviceTypes & AUDIO_DEVICE_OUT_SPEAKER;
         }
@@ -5387,6 +5505,8 @@ audio_devices_t AudioPolicyManager::getDeviceForInputSource(audio_source_t input
             device = AUDIO_DEVICE_IN_WIRED_HEADSET;
         } else if (availableDeviceTypes & AUDIO_DEVICE_IN_USB_DEVICE) {
             device = AUDIO_DEVICE_IN_USB_DEVICE;
+        } else if (availableDeviceTypes & AUDIO_DEVICE_IN_ANLG_DOCK_HEADSET) {
+            device = AUDIO_DEVICE_IN_ANLG_DOCK_HEADSET;
         } else if (availableDeviceTypes & AUDIO_DEVICE_IN_BUILTIN_MIC) {
             device = AUDIO_DEVICE_IN_BUILTIN_MIC;
         }
@@ -5414,6 +5534,14 @@ audio_devices_t AudioPolicyManager::getDeviceForInputSource(audio_source_t input
             device = AUDIO_DEVICE_IN_FM_TUNER;
         }
         break;
+#ifdef AUDIO_EXTN_FM_ENABLED
+    case AUDIO_SOURCE_FM_RX:
+        device = AUDIO_DEVICE_IN_FM_RX;
+        break;
+    case AUDIO_SOURCE_FM_RX_A2DP:
+        device = AUDIO_DEVICE_IN_FM_RX_A2DP;
+        break;
+#endif
     default:
         ALOGW("getDeviceForInputSource() invalid input source %d", inputSource);
         break;
@@ -5792,6 +5920,23 @@ float AudioPolicyManager::computeVolume(audio_stream_type_t stream,
     if (device == AUDIO_DEVICE_NONE) {
         device = outputDesc->device();
     }
+
+    // if volume is not 0 (not muted), force media volume to max on digital output
+    if (stream == AUDIO_STREAM_MUSIC &&
+        index != mStreams[stream].mIndexMin &&
+        (device == AUDIO_DEVICE_OUT_AUX_DIGITAL ||
+#ifdef AUDIO_EXTN_AFE_PROXY_ENABLED
+         device == AUDIO_DEVICE_OUT_PROXY ||
+#endif
+         device == AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET)) {
+        return 1.0;
+    }
+
+#ifdef AUDIO_EXTN_INCALL_MUSIC_ENABLED
+    if (stream == AUDIO_STREAM_INCALL_MUSIC) {
+        return 1.0;
+    }
+#endif
 
     volume = volIndexToAmpl(device, streamDesc, index);
 
