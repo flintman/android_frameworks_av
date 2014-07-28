@@ -2595,7 +2595,7 @@ status_t ACodec::setupVideoEncoder(const char *mime, const sp<AMessage> &msg) {
             break;
     }
 
-    ALOGI("setupVideoEncoder succeeded");
+    ALOGI("setupVideoEncoder %d", err == OK ? "succeeded" : "failed");
 
     return err;
 }
@@ -2918,6 +2918,8 @@ status_t ACodec::setupAVCEncoderParameters(const sp<AMessage> &msg) {
         err = verifySupportForProfileAndLevel(profile, level);
 
         if (err != OK) {
+            ALOGE("%s does not support profile %x @ level %x",
+                    mComponentName.c_str(), profile, level);
             return err;
         }
 
@@ -2926,11 +2928,14 @@ status_t ACodec::setupAVCEncoderParameters(const sp<AMessage> &msg) {
     }
 
     // XXX
+    // Allow higher profiles to be set since the encoder seems to support
+#if 0
     if (h264type.eProfile != OMX_VIDEO_AVCProfileBaseline) {
         ALOGW("Use baseline profile instead of %d for AVC recording",
             h264type.eProfile);
         h264type.eProfile = OMX_VIDEO_AVCProfileBaseline;
     }
+#endif
 
     if (h264type.eProfile == OMX_VIDEO_AVCProfileBaseline) {
         h264type.nSliceHeaderSpacing = 0;
