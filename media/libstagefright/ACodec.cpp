@@ -4675,6 +4675,7 @@ bool ACodec::BaseState::onOMXFillBufferDone(
 
                 mCodec->mPortEOS[kPortIndexOutput] = true;
             }
+            info->mData->meta()->setObject("graphic-buffer", info->mGraphicBuffer);
             break;
         }
 
