@@ -169,6 +169,8 @@ struct ExtendedUtils {
         static void getRtpPortRange(unsigned *start, unsigned *end);
 
         static bool isVideoRenderingDisabled();
+
+        static bool getSTAProxyConfig(int32_t &port);
     };
 
     struct RTSPStream {
@@ -203,7 +205,6 @@ struct ExtendedUtils {
 
     static const int32_t kNumBFramesPerPFrame = 1;
     static bool mIsQCHWAACEncoder;
-
     //set B frames for MPEG4
     static void setBFrames(OMX_VIDEO_PARAM_MPEG4TYPE &mpeg4type,
             const char* componentName);
