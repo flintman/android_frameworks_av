@@ -1466,7 +1466,8 @@ status_t ACodec::configureCodec(
                 inputFormat->setInt32("adaptive-playback", true);
             }
 
-            ALOGI("DRC Mode: %s", (mStoreMetaDataInOutputBuffers ? "Dynamic Buffer Mode" :
+            ALOGI("[%s] DRC Mode: %s", mComponentName.c_str(),
+                    (mStoreMetaDataInOutputBuffers ? "Dynamic Buffer Mode" :
                     (bAdaptivePlaybackMode ? "Adaptive Mode" : "Port Reconfig Mode")));
             int32_t push;
             if (msg->findInt32("push-blank-buffers-on-shutdown", &push)
@@ -2634,7 +2635,8 @@ status_t ACodec::setupVideoEncoder(const char *mime, const sp<AMessage> &msg) {
             break;
     }
 
-    ALOGI("setupVideoEncoder %d", err == OK ? "succeeded" : "failed");
+    ALOGI("[%s] setupVideoEncoder %s", mComponentName.c_str(),
+            err == OK ? "succeeded" : "failed");
 
     return err;
 }
