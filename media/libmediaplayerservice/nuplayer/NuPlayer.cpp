@@ -167,6 +167,7 @@ NuPlayer::NuPlayer()
     : mUIDValid(false),
       mSourceFlags(0),
       mOffloadAudio(false),
+      mIsStreaming(true),
       mAudioDecoderGeneration(0),
       mVideoDecoderGeneration(0),
       mRendererGeneration(0),
@@ -203,6 +204,7 @@ void NuPlayer::setDataSourceAsync(const sp<IStreamSource> &source) {
 
     sp<AMessage> notify = new AMessage(kWhatSourceNotify, id());
 
+    mIsStreaming = true;
     msg->setObject("source", new StreamingSource(notify, source));
     msg->post();
 }
@@ -261,6 +263,7 @@ void NuPlayer::setDataSourceAsync(
             ALOGE("Failed to set data source!");
         }
     }
+    mIsStreaming = true;
     msg->setObject("source", source);
     msg->post();
 }
@@ -279,6 +282,7 @@ void NuPlayer::setDataSourceAsync(int fd, int64_t offset, int64_t length) {
         ALOGE("Failed to set data source!");
         source = NULL;
     }
+    mIsStreaming = false;
 
     msg->setObject("source", source);
     msg->post();
@@ -634,7 +638,7 @@ void NuPlayer::onMessageReceived(const sp<AMessage> &msg) {
                 audio_stream_type_t streamType = mAudioSink->getAudioStreamType();
                 const bool hasVideo = (videoFormat != NULL);
                 const bool canOffload = canOffloadStream(
-                        audioMeta, hasVideo, true /* is_streaming */, streamType);
+                        audioMeta, hasVideo, mIsStreaming /* is_streaming */, streamType);
                 if (canOffload) {
                     if (!mOffloadAudio) {
                         mRenderer->signalEnableOffloadAudio();

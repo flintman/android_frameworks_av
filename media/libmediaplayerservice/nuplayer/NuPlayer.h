@@ -131,6 +131,7 @@ private:
     sp<DecoderBase> mVideoDecoder;
     bool mOffloadAudio;
     sp<DecoderBase> mAudioDecoder;
+    bool mIsStreaming;
     sp<CCDecoder> mCCDecoder;
     sp<Renderer> mRenderer;
     sp<ALooper> mRendererLooper;
