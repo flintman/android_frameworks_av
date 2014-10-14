@@ -855,7 +855,7 @@ void AudioPolicyManager::setPhoneState(audio_mode_t state)
         //suspend  PCM (deep-buffer) output & close  compress & direct tracks
         for (size_t i = 0; i < mOutputs.size(); i++) {
             sp<AudioOutputDescriptor> outputDesc = mOutputs.valueAt(i);
-            if ( (outputDesc != NULL) || (outputDesc->mProfile != NULL)) {
+            if ( (outputDesc == NULL) || (outputDesc->mProfile == NULL)) {
                ALOGD("ouput desc / profile is NULL");
                continue;
             }
@@ -884,7 +884,7 @@ void AudioPolicyManager::setPhoneState(audio_mode_t state)
         //restore PCM (deep-buffer) output after call termination
         for (size_t i = 0; i < mOutputs.size(); i++) {
             sp<AudioOutputDescriptor> outputDesc = mOutputs.valueAt(i);
-            if ( (outputDesc != NULL) || (outputDesc->mProfile != NULL)) {
+            if ( (outputDesc == NULL) || (outputDesc->mProfile == NULL)) {
                ALOGD("ouput desc / profile is NULL");
                continue;
             }
