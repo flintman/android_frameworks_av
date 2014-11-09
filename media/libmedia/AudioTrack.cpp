@@ -344,6 +344,7 @@ status_t AudioTrack::set(
         flags = (audio_output_flags_t)(flags | AUDIO_OUTPUT_FLAG_DIRECT);
     }
 
+#ifdef QCOM_HARDWARE
     if ((mStreamType == AUDIO_STREAM_VOICE_CALL) &&
         (mChannelCount == 1) &&
         (mSampleRate == 8000 || mSampleRate == 16000)) {
@@ -391,6 +392,7 @@ status_t AudioTrack::set(
             }
         }
     }
+#endif
 
     if (flags & AUDIO_OUTPUT_FLAG_DIRECT) {
         if (audio_is_linear_pcm(format)) {

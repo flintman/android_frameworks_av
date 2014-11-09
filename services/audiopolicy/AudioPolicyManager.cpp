@@ -6305,6 +6305,7 @@ const AudioPolicyManager::VolumeCurvePoint
         sFullScaleVolumeCurve, // DEVICE_CATEGORY_EARPIECE
         sFullScaleVolumeCurve  // DEVICE_CATEGORY_EXT_MEDIA
     },
+#endif
 };
 
 void AudioPolicyManager::initializeVolumeCurves()
