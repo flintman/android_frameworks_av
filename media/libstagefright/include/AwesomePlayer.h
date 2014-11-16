@@ -225,7 +225,9 @@ private:
 
     bool mWatchForAudioSeekComplete;
     bool mWatchForAudioEOS;
+#ifdef QCOM_DIRECTTRACK
     static int mTunnelAliveAP;
+#endif
 
     bool mIsFirstFrameAfterResume;
 
@@ -340,7 +342,9 @@ private:
         ASSIGN
     };
     void modifyFlags(unsigned value, FlagMode mode);
+#ifdef QCOM_DIRECTTRACK
     void checkTunnelExceptions();
+#endif
     void logFirstFrame();
     void logCatchUp(int64_t ts, int64_t clock, int64_t delta);
     void logLate(int64_t ts, int64_t clock, int64_t delta);
@@ -408,9 +412,11 @@ private:
     status_t selectTrack(size_t trackIndex, bool select);
 
     size_t countTracks() const;
+#ifdef QCOM_DIRECTTRACK
     bool inSupportedTunnelFormats(const char * mime);
     //Flag to check if tunnel mode audio is enabled
     bool mIsTunnelAudio;
+#endif
 
     bool isWidevineContent() const;
 
