@@ -1492,6 +1492,11 @@ status_t NuPlayer::Renderer::onOpenAudioSink(
                     audioFormat = AUDIO_FORMAT_PCM_16_BIT_OFFLOAD;
                 }
             }
+#ifdef PCM_OFFLOAD_ENABLED
+            if (audio_is_linear_pcm(audioFormat) || audio_is_offload_pcm(audioFormat)) {
+                audioFormat = AUDIO_FORMAT_PCM_16_BIT_OFFLOAD;
+            }
+#endif
             ALOGV("Mime \"%s\" mapped to audio_format 0x%x",
                     mime.c_str(), audioFormat);
 
