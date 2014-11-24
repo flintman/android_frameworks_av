@@ -1904,7 +1904,7 @@ status_t AudioPolicyManager::startOutput(audio_io_handle_t output,
         uint32_t muteWaitMs = setOutputDevice(output, newDevice, force);
 
         // handle special case for sonification while in call
-        if (isInCall()) {
+        if (isInCall() && (output == mPrimaryOutput)) {
             handleIncallSonification(stream, true, false);
         }
 
@@ -1986,7 +1986,7 @@ status_t AudioPolicyManager::stopOutput(audio_io_handle_t output,
     handleEventForBeacon(stream == AUDIO_STREAM_TTS ? STOPPING_BEACON : STOPPING_OUTPUT);
 
     // handle special case for sonification while in call
-    if ((isInCall()) && (outputDesc->mRefCount[stream] == 1)) {
+    if ((isInCall()) && (outputDesc->mRefCount[stream] == 1) && (output == mPrimaryOutput)) {
         handleIncallSonification(stream, false, false);
     }
 
