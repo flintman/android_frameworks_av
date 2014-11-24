@@ -33,6 +33,7 @@
 
 #include <inttypes.h>
 
+#ifdef ENABLE_AV_ENHANCEMENTS
 #include <ExtendedUtils.h>
 #ifdef ENABLE_AV_ENHANCEMENTS
 #include <QCMediaDefs.h>
@@ -154,6 +155,13 @@ private:
     enum Type {
         AVC,
         AAC,
+#ifdef ENABLE_AV_ENHANCEMENTS
+        MP3,
+        AC3,
+        EAC3,
+        DTS,
+        MPEG4,
+#endif
         OTHER
     };
 
@@ -254,6 +262,7 @@ MatroskaSource::MatroskaSource(
         ALOGV("mNALSizeLen = %zu", mNALSizeLen);
     } else if (!strcasecmp(mime, MEDIA_MIMETYPE_AUDIO_AAC)) {
         mType = AAC;
+#ifdef ENABLE_AV_ENHANCEMENTS
     } else if (!strcasecmp(mime, MEDIA_MIMETYPE_AUDIO_AC3)) {
         mType = AC3;
     } else if (!strcasecmp(mime, MEDIA_MIMETYPE_AUDIO_EAC3)) {
@@ -904,7 +913,9 @@ static void addESDSFromCodecPrivate(
 
     meta->setData(kKeyESDS, 0, esds, esdsSize);
 
+#ifdef ENABLE_AV_ENHANCEMENTS
     ExtendedUtils::updateVideoTrackInfoFromESDS_MPEG4Video(meta);
+#endif
 
     delete[] esds;
     esds = NULL;
@@ -1026,6 +1037,7 @@ void MatroskaExtractor::addTracks() {
                     meta->setCString(kKeyMIMEType, MEDIA_MIMETYPE_VIDEO_VP8);
                 } else if (!strcmp("V_VP9", codecID)) {
                     meta->setCString(kKeyMIMEType, MEDIA_MIMETYPE_VIDEO_VP9);
+#ifdef ENABLE_AV_ENHANCEMENTS
                 } else if (!strcmp("V_MS/VFW/FOURCC", codecID)) {
                     if (codecPrivateSize >= sizeof(BITMAPINFOHEADER)) {
                         char *fourcc = (char *) &((BITMAPINFOHEADER *) codecPrivate)->biCompression;
@@ -1069,6 +1081,7 @@ void MatroskaExtractor::addTracks() {
                         ALOGW("fourcc size: %d is not supported\n", codecPrivateSize);
                         continue;
                     }
+#endif
                 } else {
                     ALOGW("%s is not supported.", codecID);
                     continue;
@@ -1103,6 +1116,7 @@ void MatroskaExtractor::addTracks() {
                     mSeekPreRollNs = track->GetSeekPreRoll();
                 } else if (!strcmp("A_MPEG/L3", codecID)) {
                     meta->setCString(kKeyMIMEType, MEDIA_MIMETYPE_AUDIO_MPEG);
+#ifdef ENABLE_AV_ENHANCEMENTS
                 } else if (!strcmp("A_AC3", codecID)) {
                     meta->setCString(kKeyMIMEType, MEDIA_MIMETYPE_AUDIO_AC3);
                 } else if (!strcmp("A_EAC3", codecID)) {
