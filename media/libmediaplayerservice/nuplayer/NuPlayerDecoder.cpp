@@ -142,7 +142,13 @@ void NuPlayer::Decoder::onConfigure(const sp<AMessage> &format) {
     ALOGV("[%s] onConfigure (surface=%p)", mComponentName.c_str(), surface.get());
 
     ExtendedCodec::overrideMimeType(format, &mime);
-    mCodec = MediaCodec::CreateByType(mCodecLooper, mime.c_str(), false /* encoder */);
+
+    if (!mComponentName.startsWith(mime.c_str())) {
+        mCodec = MediaCodec::CreateByComponentName(mCodecLooper, mComponentName.c_str());
+    } else {
+        mCodec = MediaCodec::CreateByType(mCodecLooper, mime.c_str(), false /* encoder */);
+    }
+
     int32_t secure = 0;
     if (format->findInt32("secure", &secure) && secure != 0) {
         if (mCodec != NULL) {

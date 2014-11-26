@@ -1699,7 +1699,6 @@ status_t ACodec::configureCodec(
             err = setupRawAudioFormat(kPortIndexInput, sampleRate, numChannels);
         }
     } else if (!strncmp(mComponentName.c_str(), "OMX.google.", 11) &&
-            strncmp("OMX.ffmpeg.", mCodec->mComponentName.c_str(), 11) &&
             !strcasecmp(mime, MEDIA_MIMETYPE_AUDIO_AC3)) {
         int32_t numChannels;
         int32_t sampleRate;
@@ -5022,6 +5021,7 @@ bool ACodec::UninitializedState::onAllocateComponent(const sp<AMessage> &msg) {
             encoder = false;
         }
 
+        ALOGV("onAllocateComponent %s %d", mime.c_str(), encoder);
 #ifdef ENABLE_AV_ENHANCEMENTS
     // Call UseQCHWAACEncoder with no arguments to get the correct state since
     // MediaCodecSource does not pass the output format details when calling
@@ -5047,20 +5047,13 @@ bool ACodec::UninitializedState::onAllocateComponent(const sp<AMessage> &msg) {
                 &matchingCodecs);
 #endif
     } else
+#endif
         OMXCodec::findMatchingCodecs(
                 mime.c_str(),
                 encoder, // createEncoder
                 NULL,  // matchComponentName
                 0,     // flags
                 &matchingCodecs);
-#else
-    OMXCodec::findMatchingCodecs(
-                mime.c_str(),
-                encoder, // createEncoder
-                NULL,  // matchComponentName
-                0,     // flags
-                &matchingCodecs);
-#endif
     }
 
     sp<CodecObserver> observer = new CodecObserver;
@@ -5070,7 +5063,8 @@ bool ACodec::UninitializedState::onAllocateComponent(const sp<AMessage> &msg) {
             ++matchIndex) {
         componentName = matchingCodecs.itemAt(matchIndex).mName.string();
         quirks = matchingCodecs.itemAt(matchIndex).mQuirks;
-        ExtendedCodec::overrideComponentName(quirks, msg, &componentName, &mime, encoder);
+        // this doesn't work here as the format isn't passed in the message
+        //ExtendedCodec::overrideComponentName(quirks, msg, &componentName, &mime, encoder);
 
         pid_t tid = androidGetTid();
         int prevPriority = androidGetThreadPriority(tid);
