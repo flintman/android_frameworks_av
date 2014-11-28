@@ -33,6 +33,8 @@
 #include <media/stagefright/Utils.h>
 
 #include <OMX_Component.h>
+#include <OMX_AudioExt.h>
+#include <OMX_IndexExt.h>
 
 namespace android {
 
@@ -147,7 +149,7 @@ status_t FFMPEGSoftCodec::handleSupportedAudioFormats(int format, AString* mime)
         *mime = MEDIA_MIMETYPE_AUDIO_MPEG_LAYER_II;
     } else if (format == OMX_AUDIO_CodingWMA ) {
         *mime = MEDIA_MIMETYPE_AUDIO_WMA;
-    } else if (format == OMX_AUDIO_CodingAC3 ) {
+    } else if (format == OMX_AUDIO_CodingAC3 || format == OMX_AUDIO_CodingAndroidAC3) {
         *mime = MEDIA_MIMETYPE_AUDIO_AC3;
     } else if (format == OMX_AUDIO_CodingAPE) {
         *mime = MEDIA_MIMETYPE_AUDIO_APE;
@@ -744,7 +746,7 @@ status_t FFMPEGSoftCodec::setAC3Format(
     int32_t numChannels = 0;
     int32_t sampleRate = 0;
     int32_t bitsPerSample = 0;
-    OMX_AUDIO_PARAM_AC3TYPE param;
+    OMX_AUDIO_PARAM_ANDROID_AC3TYPE param;
 
     CHECK(msg->findInt32(ExtendedCodec::getMsgKey(kKeyChannelCount), &numChannels));
     CHECK(msg->findInt32(ExtendedCodec::getMsgKey(kKeySampleRate), &sampleRate));
@@ -756,15 +758,15 @@ status_t FFMPEGSoftCodec::setAC3Format(
     param.nPortIndex = kPortIndexInput;
 
     status_t err = OMXhandle->getParameter(
-            nodeID, OMX_IndexParamAudioAc3, &param, sizeof(param));
+            nodeID, (OMX_INDEXTYPE)OMX_IndexParamAudioAndroidAc3, &param, sizeof(param));
     if (err != OK)
         return err;
 
     param.nChannels = numChannels;
-    param.nSamplingRate = sampleRate;
+    param.nSampleRate = sampleRate;
 
     err = OMXhandle->setParameter(
-            nodeID, OMX_IndexParamAudioAc3, &param, sizeof(param));
+            nodeID, (OMX_INDEXTYPE)OMX_IndexParamAudioAndroidAc3, &param, sizeof(param));
     return err;
 }
 
