@@ -1470,6 +1470,26 @@ status_t NuPlayer::Renderer::onOpenAudioSink(
     int32_t sampleRate;
     CHECK(format->findInt32("sample-rate", &sampleRate));
 
+    AString mime;
+    CHECK(format->findString("mime", &mime));
+
+#ifdef ENABLE_AV_ENHANCEMENTS
+    char prop[PROPERTY_VALUE_MAX] = {0};
+    property_get("audio.offload.pcm.enable", prop, "0");
+    pcmOffload = (atoi(prop) || !strcmp(prop, "true")) &&
+            !strcasecmp(mime.c_str(), MEDIA_MIMETYPE_AUDIO_RAW);
+
+    // At this point we can check if PCM should be offloaded
+    if (!offloadingAudio() && (!offloadOnly && pcmOffload)) {
+        sp<MetaData> aMeta = new MetaData;
+        convertMessageToMetaData(format, aMeta);
+        if  (canOffloadStream(aMeta, false, new MetaData,
+                    true, AUDIO_STREAM_MUSIC)) {
+            mFlags |= FLAG_OFFLOAD_AUDIO;
+        }
+    }
+#endif
+
     if (offloadingAudio()) {
         audio_format_t audioFormat = AUDIO_FORMAT_PCM_16_BIT;
         AString mime;
