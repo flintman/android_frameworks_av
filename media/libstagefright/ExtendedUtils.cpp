@@ -1898,10 +1898,23 @@ void ExtendedUtils::RTSPStream::addSDES(int s, const sp<ABuffer> &buffer) {
     buffer->setRange(buffer->offset(), buffer->size() + offset);
 }
 
+bool ExtendedUtils::isPcmOffloadEnabled() {
+    bool prop_enabled = false;
+    char propValue[PROPERTY_VALUE_MAX];
+    if(property_get("audio.offload.pcm.16bit.enable", propValue, "false"))
+        prop_enabled = atoi(propValue) || !strncmp("true", propValue, 4);
+    if(property_get("audio.offload.pcm.24bit.enable", propValue, "false"))
+        prop_enabled = prop_enabled || atoi(propValue) || !strncmp("true", propValue, 4);
+    return prop_enabled;
+}
+
 //return true if mime type is not support for pcm offload
 //return true if PCM offload is not enabled
 bool ExtendedUtils::pcmOffloadException(const char* const mime) {
     bool decision = false;
+
+    if (!isPcmOffloadEnabled())
+        return false;
 
     if (!mime) {
         ALOGV("%s: no audio mime present, ignoring pcm offload", __func__);
@@ -2317,6 +2330,10 @@ bool ExtendedUtils::RTSPStream::GetAttribute(const char *s, const char *key, ASt
 void ExtendedUtils::RTSPStream::addRR(const sp<ABuffer> &buf) {}
 
 void ExtendedUtils::RTSPStream::addSDES(int s, const sp<ABuffer> &buffer) {}
+
+bool ExtendedUtils::isPcmOffloadEnabled() {
+    return false;
+}
 
 //return true to make sure pcm offload is not exercised
 bool ExtendedUtils::pcmOffloadException(const char* const mime) {

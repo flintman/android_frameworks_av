@@ -34,6 +34,10 @@
 #include <inttypes.h>
 #include <ExtendedUtils.h>
 
+#ifdef ENABLE_AV_ENHANCEMENTS
+#include "ExtendedUtils.h"
+#endif
+
 namespace android {
 
 // Maximum time in paused state when offloading audio decompression. When elapsed, the AudioSink
@@ -1476,7 +1480,7 @@ status_t NuPlayer::Renderer::onOpenAudioSink(
 #ifdef ENABLE_AV_ENHANCEMENTS
     char prop[PROPERTY_VALUE_MAX] = {0};
     property_get("audio.offload.pcm.enable", prop, "0");
-    pcmOffload = (atoi(prop) || !strcmp(prop, "true")) &&
+    pcmOffload = ExtendedUtils::isPcmOffloadEnabled() &&
             !strcasecmp(mime.c_str(), MEDIA_MIMETYPE_AUDIO_RAW);
 
     int32_t resampled = 0;
