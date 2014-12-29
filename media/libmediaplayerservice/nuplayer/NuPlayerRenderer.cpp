@@ -1479,8 +1479,11 @@ status_t NuPlayer::Renderer::onOpenAudioSink(
     pcmOffload = (atoi(prop) || !strcmp(prop, "true")) &&
             !strcasecmp(mime.c_str(), MEDIA_MIMETYPE_AUDIO_RAW);
 
+    int32_t resampled = 0;
+    format->findInt32("resampled", &resampled);
+
     // At this point we can check if PCM should be offloaded
-    if (!offloadingAudio() && (!offloadOnly && pcmOffload)) {
+    if (!offloadingAudio() && (!offloadOnly && pcmOffload && !resampled)) {
         sp<MetaData> aMeta = new MetaData;
         convertMessageToMetaData(format, aMeta);
         if  (canOffloadStream(aMeta, false, new MetaData,
