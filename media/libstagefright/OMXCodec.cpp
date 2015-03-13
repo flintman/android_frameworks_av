@@ -48,10 +48,11 @@
 #include <media/stagefright/SkipCutBuffer.h>
 #include <utils/Vector.h>
 
-#include <OMX_Audio.h>
 #include <OMX_AudioExt.h>
 #include <OMX_Component.h>
 #include <OMX_IndexExt.h>
+#include <OMX_VideoExt.h>
+#include <OMX_AsString.h>
 
 #include "include/ExtendedUtils.h"
 
@@ -1052,6 +1053,7 @@ static size_t getFrameSize(
             CHECK(!"Should not be here. Unsupported color format.");
             break;
     }
+    return 0;
 }
 
 status_t OMXCodec::findTargetColorFormat(
@@ -4993,10 +4995,10 @@ void OMXCodec::dumpPortStatus(OMX_U32 portIndex) {
             printf("  nStride = %" PRIu32 "\n", imageDef->nStride);
 
             printf("  eCompressionFormat = %s\n",
-                   imageCompressionFormatString(imageDef->eCompressionFormat));
+                   asString(imageDef->eCompressionFormat));
 
             printf("  eColorFormat = %s\n",
-                   colorFormatString(imageDef->eColorFormat));
+                   asString(imageDef->eColorFormat));
 
             break;
         }
@@ -5012,10 +5014,10 @@ void OMXCodec::dumpPortStatus(OMX_U32 portIndex) {
             printf("  nStride = %" PRIu32 "\n", videoDef->nStride);
 
             printf("  eCompressionFormat = %s\n",
-                   videoCompressionFormatString(videoDef->eCompressionFormat));
+                   asString(videoDef->eCompressionFormat));
 
             printf("  eColorFormat = %s\n",
-                   colorFormatString(videoDef->eColorFormat));
+                   asString(videoDef->eColorFormat));
 
             break;
         }
@@ -5027,7 +5029,7 @@ void OMXCodec::dumpPortStatus(OMX_U32 portIndex) {
             printf("\n");
             printf("  // Audio\n");
             printf("  eEncoding = %s\n",
-                   audioCodingTypeString(audioDef->eEncoding));
+                   asString(audioDef->eEncoding));
 
             if (audioDef->eEncoding == OMX_AUDIO_CodingPCM) {
                 OMX_AUDIO_PARAM_PCMMODETYPE params;
@@ -5047,7 +5049,7 @@ void OMXCodec::dumpPortStatus(OMX_U32 portIndex) {
                        params.eNumData == OMX_NumericalDataSigned
                         ? "signed" : "unsigned");
 
-                printf("  ePCMMode = %s\n", audioPCMModeString(params.ePCMMode));
+                printf("  ePCMMode = %s\n", asString(params.ePCMMode));
             } else if (audioDef->eEncoding == OMX_AUDIO_CodingAMR) {
                 OMX_AUDIO_PARAM_AMRTYPE amr;
                 InitOMXParams(&amr);
@@ -5059,9 +5061,9 @@ void OMXCodec::dumpPortStatus(OMX_U32 portIndex) {
 
                 printf("  nChannels = %" PRIu32 "\n", amr.nChannels);
                 printf("  eAMRBandMode = %s\n",
-                        amrBandModeString(amr.eAMRBandMode));
+                        asString(amr.eAMRBandMode));
                 printf("  eAMRFrameFormat = %s\n",
-                        amrFrameFormatString(amr.eAMRFrameFormat));
+                        asString(amr.eAMRFrameFormat));
             }
 
             break;
@@ -5465,12 +5467,7 @@ status_t QueryCodec(
         const char *componentName, const char *mime,
         bool isEncoder,
         CodecCapabilities *caps) {
-    if (strncmp(componentName, "OMX.", 4)) {
-        // Not an OpenMax component but a software codec.
-        caps->mFlags = 0;
-        caps->mComponentName = componentName;
-        return OK;
-    }
+    bool isVideo = !strncasecmp(mime, "video/", 6);
 
     sp<OMXCodecObserver> observer = new OMXCodecObserver;
     IOMX::node_id node;
@@ -5485,59 +5482,63 @@ status_t QueryCodec(
     caps->mFlags = 0;
     caps->mComponentName = componentName;
 
-    OMX_VIDEO_PARAM_PROFILELEVELTYPE param;
-    InitOMXParams(&param);
+    // NOTE: OMX does not provide a way to query AAC profile support
+    if (isVideo) {
+        OMX_VIDEO_PARAM_PROFILELEVELTYPE param;
+        InitOMXParams(&param);
 
-    param.nPortIndex = !isEncoder ? 0 : 1;
+        param.nPortIndex = !isEncoder ? 0 : 1;
 
-    for (param.nProfileIndex = 0;; ++param.nProfileIndex) {
-        err = omx->getParameter(
-                node, OMX_IndexParamVideoProfileLevelQuerySupported,
-                &param, sizeof(param));
+        for (param.nProfileIndex = 0;; ++param.nProfileIndex) {
+            err = omx->getParameter(
+                    node, OMX_IndexParamVideoProfileLevelQuerySupported,
+                    &param, sizeof(param));
 
-        if (err != OK) {
-            break;
+            if (err != OK) {
+                break;
+            }
+
+            CodecProfileLevel profileLevel;
+            profileLevel.mProfile = param.eProfile;
+            profileLevel.mLevel = param.eLevel;
+
+            caps->mProfileLevels.push(profileLevel);
         }
 
-        CodecProfileLevel profileLevel;
-        profileLevel.mProfile = param.eProfile;
-        profileLevel.mLevel = param.eLevel;
+        // Color format query
+        // return colors in the order reported by the OMX component
+        // prefix "flexible" standard ones with the flexible equivalent
+        OMX_VIDEO_PARAM_PORTFORMATTYPE portFormat;
+        InitOMXParams(&portFormat);
+        portFormat.nPortIndex = !isEncoder ? 1 : 0;
+        for (portFormat.nIndex = 0;; ++portFormat.nIndex)  {
+            err = omx->getParameter(
+                    node, OMX_IndexParamVideoPortFormat,
+                    &portFormat, sizeof(portFormat));
+            if (err != OK) {
+                break;
+            }
 
-        caps->mProfileLevels.push(profileLevel);
-    }
-
-    // Color format query
-    // return colors in the order reported by the OMX component
-    // prefix "flexible" standard ones with the flexible equivalent
-    OMX_VIDEO_PARAM_PORTFORMATTYPE portFormat;
-    InitOMXParams(&portFormat);
-    portFormat.nPortIndex = !isEncoder ? 1 : 0;
-    for (portFormat.nIndex = 0;; ++portFormat.nIndex)  {
-        err = omx->getParameter(
-                node, OMX_IndexParamVideoPortFormat,
-                &portFormat, sizeof(portFormat));
-        if (err != OK) {
-            break;
-        }
-
-        OMX_U32 flexibleEquivalent;
-        if (ACodec::isFlexibleColorFormat(
-                    omx, node, portFormat.eColorFormat, &flexibleEquivalent)) {
-            bool marked = false;
-            for (size_t i = 0; i < caps->mColorFormats.size(); i++) {
-                if (caps->mColorFormats.itemAt(i) == flexibleEquivalent) {
-                    marked = true;
-                    break;
+            OMX_U32 flexibleEquivalent;
+            if (ACodec::isFlexibleColorFormat(
+                        omx, node, portFormat.eColorFormat, false /* usingNativeWindow */,
+                        &flexibleEquivalent)) {
+                bool marked = false;
+                for (size_t i = 0; i < caps->mColorFormats.size(); i++) {
+                    if (caps->mColorFormats.itemAt(i) == flexibleEquivalent) {
+                        marked = true;
+                        break;
+                    }
+                }
+                if (!marked) {
+                    caps->mColorFormats.push(flexibleEquivalent);
                 }
             }
-            if (!marked) {
-                caps->mColorFormats.push(flexibleEquivalent);
-            }
+            caps->mColorFormats.push(portFormat.eColorFormat);
         }
-        caps->mColorFormats.push(portFormat.eColorFormat);
     }
 
-    if (!isEncoder && !strncmp(mime, "video/", 6)) {
+    if (isVideo && !isEncoder) {
         if (omx->storeMetaDataInBuffers(
                     node, 1 /* port index */, OMX_TRUE) == OK ||
             omx->prepareForAdaptivePlayback(

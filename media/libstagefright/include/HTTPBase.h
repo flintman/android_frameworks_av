@@ -50,6 +50,8 @@ struct HTTPBase : public DataSource {
 
     virtual void setCustomBwEstimate(bool flag = false);
 
+    virtual void setBandwidthHistorySize(size_t numHistoryItems);
+
     static void RegisterSocketUserTag(int sockfd, uid_t uid, uint32_t kTag);
     static void UnRegisterSocketUserTag(int sockfd);
 
@@ -57,7 +59,7 @@ struct HTTPBase : public DataSource {
     static void UnRegisterSocketUserMark(int sockfd);
 
 protected:
-    void addBandwidthMeasurement(size_t numBytes, int64_t delayUs);
+    virtual void addBandwidthMeasurement(size_t numBytes, int64_t delayUs);
 
 private:
     struct BandwidthEntry {
@@ -71,6 +73,7 @@ private:
     size_t mNumBandwidthHistoryItems;
     int64_t mTotalTransferTimeUs;
     size_t mTotalTransferBytes;
+    size_t mMaxBandwidthHistoryItems;
 
     enum {
         kMinBandwidthCollectFreqMs = 1000,   // 1 second
