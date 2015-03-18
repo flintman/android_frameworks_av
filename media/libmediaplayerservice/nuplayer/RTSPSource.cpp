@@ -315,7 +315,7 @@ void NuPlayer::RTSPSource::performSeek(int64_t seekTimeUs) {
         TrackInfo *info = &mTracks.editItemAt(index);
         sp<AnotherPacketSource> source = info->mSource;
         if (source != NULL) {
-            source->queueDiscontinuity(ATSParser::DISCONTINUITY_SEEK, NULL, true);
+            source->queueDiscontinuity(ATSParser::DISCONTINUITY_TIME, NULL, true);
         }
     }
 }
