@@ -636,9 +636,11 @@ void NuPlayer::onMessageReceived(const sp<AMessage> &msg) {
                 sp<MetaData> audioMeta = mSource->getFormatMeta(true /* audio */);
                 sp<AMessage> videoFormat = mSource->getFormat(false /* audio */);
                 audio_stream_type_t streamType = mAudioSink->getAudioStreamType();
+                sp<MetaData> vMeta = new MetaData;
+                convertMessageToMetaData(videoFormat, vMeta);
                 const bool hasVideo = (videoFormat != NULL);
                 const bool canOffload = canOffloadStream(
-                        audioMeta, hasVideo, mIsStreaming /* is_streaming */, streamType);
+                        audioMeta, hasVideo, vMeta, mIsStreaming /* is_streaming */, streamType);
                 if (canOffload) {
                     if (!mOffloadAudio) {
                         mRenderer->signalEnableOffloadAudio();

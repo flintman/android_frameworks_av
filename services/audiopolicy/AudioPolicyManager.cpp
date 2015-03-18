@@ -4980,9 +4980,6 @@ AudioPolicyManager::routing_strategy AudioPolicyManager::getStrategy(
         // NOTE: SYSTEM stream uses MEDIA strategy because muting music and switching outputs
         // while key clicks are played produces a poor result
     case AUDIO_STREAM_MUSIC:
-#ifdef AUDIO_EXTN_INCALL_MUSIC_ENABLED
-    case AUDIO_STREAM_INCALL_MUSIC:
-#endif
         return STRATEGY_MEDIA;
     case AUDIO_STREAM_ENFORCED_AUDIBLE:
         return STRATEGY_ENFORCED_AUDIBLE;
@@ -6305,7 +6302,6 @@ const AudioPolicyManager::VolumeCurvePoint
         sFullScaleVolumeCurve, // DEVICE_CATEGORY_EARPIECE
         sFullScaleVolumeCurve  // DEVICE_CATEGORY_EXT_MEDIA
     },
-#endif
 };
 
 void AudioPolicyManager::initializeVolumeCurves()
@@ -6357,12 +6353,6 @@ float AudioPolicyManager::computeVolume(audio_stream_type_t stream,
          device == AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET)) {
         return 1.0;
     }
-
-#ifdef AUDIO_EXTN_INCALL_MUSIC_ENABLED
-    if (stream == AUDIO_STREAM_INCALL_MUSIC) {
-        return 1.0;
-    }
-#endif
 
     volume = volIndexToAmpl(device, streamDesc, index);
 
