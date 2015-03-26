@@ -52,6 +52,8 @@
 #include "ESDS.h"
 #include <media/stagefright/Utils.h>
 
+#include "ExtendedUtils.h"
+
 namespace android {
 
 struct NuPlayer::Action : public RefBase {
@@ -1243,58 +1245,6 @@ void NuPlayer::tryOpenAudioSinkForOffload(const sp<AMessage> &format, bool hasVi
             format->setInt32("sbit", 24);
         }
     }
-
-void NuPlayer::openAudioSink(const sp<AMessage> &format, bool offloadOnly) {
-    uint32_t flags;
-    int64_t durationUs;
-    if (mSource->getDuration(&durationUs) == OK &&
-            durationUs > AUDIO_SINK_MIN_DEEP_BUFFER_DURATION_US) {
-        flags = AUDIO_OUTPUT_FLAG_DEEP_BUFFER;
-    } else {
-        flags = AUDIO_OUTPUT_FLAG_NONE;
-    }
-
-    format->setInt64("durationUs", durationUs);
-
-    // avoid PCM offload when resampler is used
-    bool resampled = false;
-    sp<MetaData> audioMeta = mSource->getFormatMeta(true);
-
-    AString mime;
-    CHECK(format->findString("mime", &mime));
-    if (audioMeta != NULL && !strcasecmp(mime.c_str(), MEDIA_MIMETYPE_AUDIO_RAW)) {
-        int32_t srcBitsPerSample, bitsPerSample = 16;
-        int32_t srcChannels, channels = 0;
-        int32_t srcSampleRate, sampleRate = 0;
-        audioMeta->findInt32(kKeyBitsPerSample, &srcBitsPerSample);
-        format->findInt32("bits-per-sample", &bitsPerSample);
-        audioMeta->findInt32(kKeyChannelCount, &srcChannels);
-        format->findInt32("channel-count", &channels);
-        audioMeta->findInt32(kKeySampleRate, &srcSampleRate);
-        format->findInt32("sample-rate", &sampleRate);
-
-        resampled = !((srcBitsPerSample == bitsPerSample) &&
-                      (srcChannels == channels) &&
-                      (srcSampleRate == sampleRate));
-        format->setInt32("resampled", resampled);
-    }
-
-    ALOGV("openAudioSink: resampled=%d format=%s", resampled, format->debugString().c_str());
-
-    mOffloadAudio = mRenderer->openAudioSink(
-            format, offloadOnly, (mVideoDecoder != NULL), flags);
-
-    status_t err = mRenderer->openAudioSink(
-            format, true /* offloadOnly */, hasVideo, AUDIO_OUTPUT_FLAG_NONE, mIsStreaming, &mOffloadAudio);
-    if (err != OK) {
-        // Any failure we turn off mOffloadAudio.
-        mOffloadAudio = false;
-        mOffloadDecodedPCM = false;
-    } else if (mOffloadAudio) {
-        sp<MetaData> audioMeta =
-                mSource->getFormatMeta(true /* audio */);
-        sendMetaDataToHal(mAudioSink, audioMeta);
-    }
 }
 
 void NuPlayer::closeAudioSink() {
@@ -2026,8 +1976,6 @@ void NuPlayer::onClosedCaptionNotify(const sp<AMessage> &msg) {
         default:
             TRESPASS();
     }
-
-
 }
 
 void NuPlayer::sendSubtitleData(const sp<ABuffer> &buffer, int32_t baseIndex) {

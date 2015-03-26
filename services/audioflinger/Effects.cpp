@@ -90,12 +90,12 @@ AudioFlinger::EffectModule::EffectModule(ThreadBase *thread,
       // mDisableWaitCnt is set by process() and updateState() and not used before then
       mSuspended(false),
 #ifdef QCOM_DIRECTTRACK
-      mAudioFlinger(thread->mAudioFlinger),
       mIsForLPA(false)
+#endif
 #ifdef HW_ACC_EFFECTS
       , mHwAccModeEnabled(false)
 #else
-      mAudioFlinger(thread->mAudioFlinger)
+      , mAudioFlinger(thread->mAudioFlinger)
 #endif
 {
     ALOGV("Constructor %p", this);

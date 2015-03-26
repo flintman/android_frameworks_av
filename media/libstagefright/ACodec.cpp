@@ -1840,7 +1840,7 @@ status_t ACodec::configureCodec(
                 || !msg->findInt32("sample-rate", &sampleRate)) {
             err = INVALID_OPERATION;
         } else {
-            err = setupRawAudioFormat(kPortIndexInput, sampleRate, numChannels);
+            err = setupRawAudioFormat(kPortIndexInput, sampleRate, numChannels, 16);
         }
     } else if (!strncmp(mComponentName.c_str(), "OMX.google.", 11)
             && !strcasecmp(mime, MEDIA_MIMETYPE_AUDIO_AC3)) {
@@ -2172,7 +2172,7 @@ status_t ACodec::setupAC3Codec(
 status_t ACodec::setupEAC3Codec(
         bool encoder, int32_t numChannels, int32_t sampleRate) {
     status_t err = setupRawAudioFormat(
-            encoder ? kPortIndexInput : kPortIndexOutput, sampleRate, numChannels);
+            encoder ? kPortIndexInput : kPortIndexOutput, sampleRate, numChannels, 16);
 
     if (err != OK) {
         return err;
@@ -2310,21 +2310,14 @@ status_t ACodec::setupFlacCodec(
         }
     }
 
-#ifdef QTI_FLAC_DECODER
-    return setupRawAudioFormat(
-            kPortIndexInput,
-            sampleRate,
-            numChannels);
-#else
     return setupRawAudioFormat(
             encoder ? kPortIndexInput : kPortIndexOutput,
             sampleRate,
             numChannels, bitsPerSample);
-#endif
 }
 
 status_t ACodec::setupRawAudioFormat(
-        OMX_U32 portIndex, int32_t sampleRate, int32_t numChannels) {
+        OMX_U32 portIndex, int32_t sampleRate, int32_t numChannels, int32_t bitsPerSample) {
     OMX_PARAM_PORTDEFINITIONTYPE def;
     InitOMXParams(&def);
     def.nPortIndex = portIndex;

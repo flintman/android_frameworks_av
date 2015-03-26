@@ -812,8 +812,7 @@ bool canOffloadStream(const sp<MetaData>& meta, bool hasVideo, const sp<MetaData
         ALOGV("%s Bits per sample is %d", __func__, bitWidth);
     else
         ALOGV("%s Sample Bit info in meta data is %d", __func__, bitWidth);
-#endif
-#endif
+
     if (mapMimeToAudioFormat(info.format, mime) != OK) {
         ALOGE(" Couldn't map mime type \"%s\" to a valid AudioSystem::audio_format !", mime);
         return false;

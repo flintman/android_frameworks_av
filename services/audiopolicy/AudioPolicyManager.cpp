@@ -333,8 +333,6 @@ status_t AudioPolicyManager::setDeviceConnectionStateInt(audio_devices_t device,
     String8 address = (device_address == NULL) ? String8("") : String8(device_address);
     AudioParameter param;
 
-    AudioParameter param;
-
     // handle legacy remote submix case where the address was not always specified
     if (deviceDistinguishesOnAddress(device) && (address.length() == 0)) {
         address = String8("0");
@@ -5383,8 +5381,6 @@ AudioPolicyManager::routing_strategy AudioPolicyManager::getStrategy(
         return STRATEGY_SONIFICATION_RESPECTFUL;
     case AUDIO_STREAM_DTMF:
         return STRATEGY_DTMF;
-    default:
-        ALOGE("unknown stream type %d", stream);
     case AUDIO_STREAM_SYSTEM:
         // NOTE: SYSTEM stream uses MEDIA strategy because muting music and switching outputs
         // while key clicks are played produces a poor result

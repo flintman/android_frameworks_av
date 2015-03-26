@@ -564,8 +564,13 @@ status_t AudioTrack::set(
 
 #ifdef QCOM_DIRECTTRACK
     if (flags & AUDIO_OUTPUT_FLAG_LPA || flags & AUDIO_OUTPUT_FLAG_TUNNEL) {
- audio_io_handle_t output = AudioSystem::getOutputForAttr(&mAttributes, mSampleRate, mFormat,
-            mChannelMask, mFlags, mOffloadInfo);
+        audio_io_handle_t output;
+        audio_stream_type_t streamType = mStreamType;
+        audio_attributes_t *attr = (mStreamType == AUDIO_STREAM_DEFAULT) ? &mAttributes : NULL;
+        status_t status = AudioSystem::getOutputForAttr(attr, &output,
+                                                        (audio_session_t)mSessionId, &streamType,
+                                                        mSampleRate, mFormat, mChannelMask,
+                                                        mFlags, mOffloadInfo);
     if (output == AUDIO_IO_HANDLE_NONE) {
         ALOGE("Could not get audio output for stream type %d, usage %d, sample rate %u, format %#x,"
               " channel mask %#x, flags %#x",
@@ -583,7 +588,7 @@ status_t AudioTrack::set(
             return NO_INIT;
         }
         mAudioFlinger = audioFlinger;
-        status_t status = NO_ERROR;
+        status = NO_ERROR;
         mDirectClient = new DirectClient(this);
         mDirectTrack = audioFlinger->createDirectTrack( getpid(),
                                                         sampleRate,

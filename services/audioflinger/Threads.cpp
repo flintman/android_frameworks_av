@@ -6885,7 +6885,7 @@ AudioFlinger::DirectAudioTrack::~DirectAudioTrack() {
         requestAndWaitForEffectsThreadExit();
         mAudioFlinger->deleteEffectSession();
     }
-    AudioSystem::releaseOutput(mOutput);
+    //TODO AudioSystem::releaseOutput(mOutput);
     releaseWakeLock();
 
     {
@@ -6898,7 +6898,7 @@ AudioFlinger::DirectAudioTrack::~DirectAudioTrack() {
 }
 
 status_t AudioFlinger::DirectAudioTrack::start() {
-    AudioSystem::startOutput(mOutput, (audio_stream_type_t)mOutputDesc->mStreamType, NULL);
+    ///TODO AudioSystem::startOutput(mOutput, (audio_stream_type_t)mOutputDesc->mStreamType, NULL);
     if(mIsPaused) {
         mIsPaused = false;
         mOutputDesc->stream->start(mOutputDesc->stream);
@@ -6914,7 +6914,7 @@ void AudioFlinger::DirectAudioTrack::stop() {
     ALOGV("DirectAudioTrack::stop");
     mOutputDesc->mActive = false;
     mOutputDesc->stream->stop(mOutputDesc->stream);
-    AudioSystem::stopOutput(mOutput, (audio_stream_type_t)mOutputDesc->mStreamType, NULL);
+    //TODO AudioSystem::stopOutput(mOutput, (audio_stream_type_t)mOutputDesc->mStreamType, NULL);
 }
 
 void AudioFlinger::DirectAudioTrack::pause() {
@@ -6922,7 +6922,7 @@ void AudioFlinger::DirectAudioTrack::pause() {
         mIsPaused = true;
         mOutputDesc->stream->pause(mOutputDesc->stream);
         mOutputDesc->mActive = false;
-        AudioSystem::stopOutput(mOutput, (audio_stream_type_t)mOutputDesc->mStreamType,NULL);
+       //TODO AudioSystem::stopOutput(mOutput, (audio_stream_type_t)mOutputDesc->mStreamType,NULL);
     }
 }
 

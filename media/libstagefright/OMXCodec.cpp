@@ -416,6 +416,8 @@ uint32_t OMXCodec::getComponentQuirks(
 
 #ifdef ENABLE_AV_ENHANCEMENTS
     quirks |= ExtendedCodec::getComponentQuirks(info);
+#endif
+
 #ifdef DOLBY_UDC
     if (info->hasQuirk("needs-flush-before-disable")) {
         quirks |= kNeedsFlushBeforeDisable;
